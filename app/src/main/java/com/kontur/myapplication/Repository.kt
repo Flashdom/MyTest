@@ -35,7 +35,7 @@ object Repository {
         val gson = Gson()
         if (!shouldMakeRequest)
             return Observable.just(getContactsFromJson(file, gson))
-                .subscribeOn(Schedulers.computation()).observeOn(AndroidSchedulers.mainThread())
+                .subscribeOn(Schedulers.computation()).observeOn(Schedulers.computation())
         else {
             return Observable.merge(
                 api.getContacts(FIRST_SOURCE),
@@ -43,7 +43,7 @@ object Repository {
                 api.getContacts(THIRD_SOURCE)
             )
                 .subscribeOn(Schedulers.computation())
-                .observeOn(AndroidSchedulers.mainThread()).map {
+                .observeOn(Schedulers.computation()).map {
                     file.outputStream().use { fileOutputStream ->
                         it.byteStream().use { fileInputStream ->
                             fileInputStream.copyTo(fileOutputStream)
@@ -73,19 +73,25 @@ object Repository {
 
 
     private fun shouldMakeRequest(context: Context): Boolean {
-        val sharedPreferences =  context.getSharedPreferences("Settings", Context.MODE_PRIVATE)
+        val sharedPreferences = context.getSharedPreferences("Settings", Context.MODE_PRIVATE)
         val timeString =
-           sharedPreferences.getString("time", "")
+            sharedPreferences.getString("time", "")
         val currentTime = Instant.now().atZone(ZoneId.systemDefault()).toInstant()
         if (timeString == "") {
-            sharedPreferences.edit().putString("time", currentTime.atZone(ZoneId.systemDefault()).toLocalDateTime().toString()).apply()
+            sharedPreferences.edit().putString(
+                "time",
+                currentTime.atZone(ZoneId.systemDefault()).toLocalDateTime().toString()
+            ).apply()
             return true
         }
         val time = LocalDateTime.parse(timeString).toInstant(ZoneOffset.UTC)
         if ((currentTime.toEpochMilli() - time.toEpochMilli())
             > Instant.ofEpochSecond(60).toEpochMilli()
         ) {
-            sharedPreferences.edit().putString("time", currentTime.atZone(ZoneId.systemDefault()).toLocalDateTime().toString()).apply()
+            sharedPreferences.edit().putString(
+                "time",
+                currentTime.atZone(ZoneId.systemDefault()).toLocalDateTime().toString()
+            ).apply()
             return true
         }
 
@@ -113,13 +119,13 @@ object Repository {
             val zoneFinishDateTime =
                 LocalDateTime.parse(it.educationPeriod.end, dtf)
             val startDate = "${zonedStartDateTime.dayOfMonth}." +
-                    "${zonedStartDateTime.month.value}." +
-                    "${zonedStartDateTime.year}"
+                    fixMonth(zonedStartDateTime.monthValue) +
+                    ".${zonedStartDateTime.year}"
 
             val endDate = "${zoneFinishDateTime.dayOfMonth}." +
-                    "${zoneFinishDateTime.month.value}." +
-                    "${zoneFinishDateTime.year}"
-            val period = Period(startDate, endDate)
+                    fixMonth(zoneFinishDateTime.monthValue) +
+                    ".${zoneFinishDateTime.year}"
+            val period = Period(endDate, startDate)
 
             contacts.add(
                 Contact(
@@ -134,6 +140,13 @@ object Repository {
             )
         }
         return contacts
+
+    }
+
+    private fun fixMonth(value: Int): String {
+        return if (value > 9)
+            value.toString()
+        else "0$value"
 
     }
 

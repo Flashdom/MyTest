@@ -34,13 +34,14 @@ class MainFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        mainViewModel.contactList.observe(viewLifecycleOwner, this::onContactsFetched)
-        mainViewModel.progress.observe(viewLifecycleOwner, this::onNetworkRequestUpdated)
-        if (File(requireContext().filesDir, "cache.json").exists())
+
+        if (!File(requireContext().filesDir, "cache.json").exists())
             File(requireContext().filesDir, "cache.json").createNewFile()
         file = File(requireContext().filesDir, "cache.json")
         mainViewModel.getInfo(file)
         initGUI()
+        mainViewModel.contactList.observe(viewLifecycleOwner, this::onContactsFetched)
+        mainViewModel.progress.observe(viewLifecycleOwner, this::onNetworkRequestUpdated)
 
 
     }
